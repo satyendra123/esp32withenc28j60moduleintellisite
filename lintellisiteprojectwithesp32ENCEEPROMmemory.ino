@@ -44,7 +44,19 @@ void setup() {
   IPAddress ip(192, 168, 1, 152); // Default IP address
   byte mac[] = {0xDE, 0xDA, 0xBE, 0xEF, 0xFE, 0xEC};
 
+  EEPROM.begin(EEPROM_SIZE);
   IPAddress storedIP = readIPAddressFromEEPROM(0);
+
+  Serial.begin(9600);
+
+  pinMode(relayPin, OUTPUT);
+  digitalWrite(relayPin, HIGH);
+  while (!Serial);
+
+  Serial.println("Initialize Ethernet with Static IP:");
+
+  Serial.print("Stored IP: ");
+  Serial.println(storedIP);
 
   if (storedIP == IPAddress(0,0,0,0))
   {
@@ -55,14 +67,6 @@ void setup() {
   {
     Ethernet.begin(mac, storedIP);
   }
-
-  Serial.begin(9600);
-
-  pinMode(relayPin, OUTPUT);
-  digitalWrite(relayPin, HIGH);
-  while (!Serial);
-
-  Serial.println("Initialize Ethernet with Static IP:");
 
   server.begin();
 
@@ -102,18 +106,21 @@ void loop() {
         Serial.println(currentIP);
         client.println(currentIP);
       } else if (command.startsWith("WRITEIP:")) {
-  String newIPString = command.substring(8);
-  Serial.println("Received WRITEIP command with IP: " + newIPString);
-  IPAddress newIP;
-  if (newIP.fromString(newIPString)) {
-    writeIPAddressToEEPROM(0, newIP); // Update the stored IP address
-    client.println("New IP address set: " + newIPString);
-    client.println("PLEASE DISCONNECT AND CONNECT WITH NEW IP");
-    client.println("PLEASE RESTART THE POWER");
-  } else {
-    client.println("Invalid IP address format.");
-  }
-} else {
+        String newIPString = command.substring(8);
+        Serial.println("Received WRITEIP command with IP: " + newIPString);
+        IPAddress newIP;
+        if (newIP.fromString(newIPString)) {
+          writeIPAddressToEEPROM(0, newIP); // Update the stored IP address
+          client.println("New IP address set: " + newIPString);
+          client.println("PLEASE DISCONNECT AND CONNECT WITH NEW IP");
+          client.println("PLEASE RESTART THE POWER");
+          client.stop(); // Stop current client connection
+          clientConnected = false; // Reset client connection flag
+          Ethernet.begin(mac, newIP); // Use the new IP for Ethernet
+        } else {
+          client.println("Invalid IP address format.");
+        }
+      } else {
         client.println("Unknown command");
       }
     }
