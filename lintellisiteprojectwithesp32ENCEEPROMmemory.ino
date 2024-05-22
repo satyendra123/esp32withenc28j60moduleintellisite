@@ -5,6 +5,7 @@
 #define relayPin 4
 
 byte mac[] = {0xDE, 0xDA, 0xBE, 0xEF, 0xFE, 0xEC};
+IPAddress ip(192, 168, 1, 152);
 
 unsigned long previousMillis = 0;
 const long interval = 3000;
@@ -16,7 +17,7 @@ bool clientConnected = false;
 EthernetClient client;
 
 void writeIPAddressToEEPROM(int startAddress, IPAddress ipAddr) {
-  for (int i = 0; i < 4; ++i) {
+  for (int i = 0; i < 4; i++) {
     EEPROM.write(startAddress + i, ipAddr[i]);
   }
   EEPROM.commit();
@@ -25,14 +26,14 @@ void writeIPAddressToEEPROM(int startAddress, IPAddress ipAddr) {
 
 IPAddress readIPAddressFromEEPROM(int startAddress) {
   byte ipBytes[4];
-  for (int i = 0; i < 4; ++i) {
+  for (int i = 0; i < 4; i++) {
     ipBytes[i] = EEPROM.read(startAddress + i);
   }
   return IPAddress(ipBytes);
 }
 
 void clearStoredIPFromEEPROM() {
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < 4; ++i) {
     EEPROM.write(i, 0);
   }
   EEPROM.commit();
@@ -41,12 +42,7 @@ void clearStoredIPFromEEPROM() {
 
 void setup() {
   Ethernet.init(5); 
-  IPAddress ip(192, 168, 1, 152); // Default IP address
-  byte mac[] = {0xDE, 0xDA, 0xBE, 0xEF, 0xFE, 0xEC};
-
-  EEPROM.begin(EEPROM_SIZE);
-  IPAddress storedIP = readIPAddressFromEEPROM(0);
-
+  Ethernet.begin(mac, ip);
   Serial.begin(9600);
 
   pinMode(relayPin, OUTPUT);
@@ -55,18 +51,9 @@ void setup() {
 
   Serial.println("Initialize Ethernet with Static IP:");
 
-  Serial.print("Stored IP: ");
-  Serial.println(storedIP);
+  EEPROM.begin(EEPROM_SIZE);
 
-  if (storedIP == IPAddress(0,0,0,0))
-  {
-    Ethernet.begin(mac, ip);
-    writeIPAddressToEEPROM(0, ip); // Store the default IP
-  }
-  else
-  {
-    Ethernet.begin(mac, storedIP);
-  }
+  writeIPAddressToEEPROM(0, ip);
 
   server.begin();
 
@@ -110,13 +97,10 @@ void loop() {
         Serial.println("Received WRITEIP command with IP: " + newIPString);
         IPAddress newIP;
         if (newIP.fromString(newIPString)) {
-          writeIPAddressToEEPROM(0, newIP); // Update the stored IP address
+          writeIPAddressToEEPROM(0, newIP);
           client.println("New IP address set: " + newIPString);
           client.println("PLEASE DISCONNECT AND CONNECT WITH NEW IP");
           client.println("PLEASE RESTART THE POWER");
-          client.stop(); // Stop current client connection
-          clientConnected = false; // Reset client connection flag
-          Ethernet.begin(mac, newIP); // Use the new IP for Ethernet
         } else {
           client.println("Invalid IP address format.");
         }
@@ -128,7 +112,7 @@ void loop() {
     clientConnected = false;
   }
   
-  // Send health packet every 3 seconds to the connected client
+    // Send health packet every 3 seconds to the connected client
   if (currentMillis - previousMillis >= interval) {
     previousMillis = currentMillis;
 
