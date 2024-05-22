@@ -1,11 +1,12 @@
+// this code is working fine
 #include <SPI.h>
 #include <EthernetENC.h>
 #include <EEPROM.h>
 
 #define relayPin 4
 
-byte mac[] = {0xDE, 0xDA, 0xBE, 0xEF, 0xFE, 0xEC};
-IPAddress ip(192, 168, 1, 152);
+byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xCE};
+IPAddress ip(192, 168, 1, 153);
 
 unsigned long previousMillis = 0;
 const long interval = 3000;
